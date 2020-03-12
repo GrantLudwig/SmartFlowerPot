@@ -63,16 +63,14 @@ function WaterFilled() {
     );
 }
 
-function Popup() {    
-    newName = ""
-    
+function Popup() {        
     const [show, setShow] = React.useState(false);
 
     const handleClose = () => setShow(false);
     const handleShow = () => setShow(true);
     const resetPlant = () =>
         axios.post('/back/newPlant', {
-            name: newName.value,
+            name: "Fred",
             type: 'Basil'
         })
         .then(function (response) {
@@ -105,7 +103,7 @@ function Popup() {
                         </Form.Group>
                         <Form.Group controlId="plantName">
                             <Form.Label>Plant Name</Form.Label>
-                            <Form.Control type="text" placeholder="Name" value={this.state.name} onChange={this.handleNameChange}}/>
+                            <Form.Control type="text" placeholder="Name"/>
                         </Form.Group>
                     </Form>
                 </Modal.Body>
