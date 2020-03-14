@@ -11,7 +11,6 @@ import Form from 'react-bootstrap/Form';
 import Overlay from 'react-bootstrap/Overlay';
 import OverlayTrigger from 'react-bootstrap/OverlayTrigger';
 import Tooltip from 'react-bootstrap/Tooltip';
-import WaterLevel from './WaterLevel';
 import 'bootstrap/dist/css/bootstrap.min.css';
 
 class PlantSettings extends React.Component {
@@ -21,7 +20,6 @@ class PlantSettings extends React.Component {
             name: "",
             type: ""
         }; 
-        this.Obj = new WaterLevel();
     }
     
     componentDidMount() {
@@ -37,7 +35,7 @@ class PlantSettings extends React.Component {
                 <WaterFilled />
                 <br />
                 <br />
-                <Popup />
+                <Popup name={this.state.name} type={this.state.type}/>
             </div> 
         );
     }
@@ -63,15 +61,15 @@ function WaterFilled() {
     );
 }
 
-function Popup() {        
+function Popup(props) {        
     const [show, setShow] = React.useState(false);
 
     const handleClose = () => setShow(false);
     const handleShow = () => setShow(true);
     const resetPlant = () =>
         axios.post('/back/newPlant', {
-            name: "Fred",
-            type: 'Basil'
+            name: props.name,
+            type: props.type
         })
         .then(function (response) {
             console.log(response);
@@ -80,6 +78,8 @@ function Popup() {
             console.log(error);
     });
     const refresh = () => window.location.reload();
+    const handleNameChange = (e) => props.name = e.target.value;
+    const handleTypeChange = (e) => props.type = e.target.value;
 
     return (
         <>
@@ -95,7 +95,7 @@ function Popup() {
                     <Form>
                         <Form.Group controlId="plantChoice">
                             <Form.Label>Plant Type</Form.Label>
-                            <Form.Control as="select">
+                            <Form.Control as="select" onChange={handleTypeChange}>
                                 <option>Basil</option>
                                 <option>Cilantro</option>
                                 <option>Rosemary</option>
@@ -103,7 +103,7 @@ function Popup() {
                         </Form.Group>
                         <Form.Group controlId="plantName">
                             <Form.Label>Plant Name</Form.Label>
-                            <Form.Control type="text" placeholder="Name"/>
+                            <Form.Control type="text" placeholder="Name" onChange={handleNameChange}/>
                         </Form.Group>
                     </Form>
                 </Modal.Body>

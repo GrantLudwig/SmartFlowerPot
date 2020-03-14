@@ -67,7 +67,7 @@ def temp():
     global sensors
 
     temperature = sensors.getTemp()
-    response = json.dumps({"temp": temperature}) # in gallons
+    response = json.dumps({"temp": temperature}) # in fahrenheit
     return Response(response=response, status=200, mimetype="application/json")
 
 @app.route("/back/resetWater", methods=['PUT'])

@@ -2,19 +2,25 @@ import time
 import datetime
 import threading
 import json
+from lux_sensor import Tsl2591 as LightSensor
+from moisture_sensor import MoistSensor as MoistureSensor
+from relay_control import GPIOcontrol as RelayControl
+import RPi.GPIO as GPIO
+from temp_sensor import TempSensor
 
 class Sensors(threading.Thread):
+    PUMP_OUTLET = 1
+    LIGHT_OUTLET = 2
+
     SENSOR_MEASURE_INTERVAL = 600 # seconds, 10 min
 
-    PUMP_RUN_TIME = 1  # seconds
+    PUMP_RUN_TIME = 2  # seconds
     PUMP_GPM = 0.5  # GPM
     PUMP_GPS = PUMP_GPM / 60.0  # Gallons per second
     FULL_WATER_BIN = 1 # 1 gallon
 
-    LIGHTING_TIME = 20  # in hours
+    LIGHTING_TIME = 18  # in hours
     DAYLIGHT = 7  # hours
-    ENOUGH_LIGHT = 60 # lumen amount
-    ENOUGH_LIGHT_TIME = 600 # 10 hours, min
 
     def __init__(self):
         threading.Thread.__init__(self)
@@ -37,11 +43,18 @@ class Sensors(threading.Thread):
         self.__plantTime = None
         self.SOIL_MOISTURE_LEVEL = None
         self.ENOUGH_LIGHT_TIME = None
+        self.ENOUGH_LIGHT = None
 
         self.__readJson()
 
         self.__lastLoopTime = 0
         self.__running = True
+
+        GPIO.setwarnings(False)
+        self.__light = LightSensor()
+        self.__moisture = MoistureSensor()
+        self.__relayControl = RelayControl()
+        self.__temp = TempSensor()
 
     def __readJson(self):
         with open("files/plantInfo.json", "r") as json_data:
@@ -59,6 +72,7 @@ class Sensors(threading.Thread):
 
         self.SOIL_MOISTURE_LEVEL = self.__plantTypeJson["Moisture"]
         self.ENOUGH_LIGHT_TIME = self.__plantTypeJson["LightTime"]
+        self.ENOUGH_LIGHT = self.__plantTypeJson["LightAmount"]
 
     def __writeJson(self):
         with open("files/plantInfo.json", 'w') as outfile:
@@ -70,7 +84,7 @@ class Sensors(threading.Thread):
         self.__writeJson()
 
     def getMoisture(self):
-        return round(self.__lastMoistureMeasure * 100 , 2)
+        return round(self.__lastMoistureMeasure * 100, 2)
 
     def getLight(self):
         return self.__lastLightMeasure
@@ -82,7 +96,7 @@ class Sensors(threading.Thread):
             return self.__nightTime
 
     def getTemp(self):
-        return self.__lastTempMeasure
+        return round(self.__lastTempMeasure, 2)
 
     def getWaterLast24(self):
         elementsToRemove = []
@@ -118,12 +132,14 @@ class Sensors(threading.Thread):
 
     def stop(self):
         self.__running = False
+        self.__relayControl.control(self.PUMP_OUTLET, False)  # Turn off pump
+        self.__relayControl.control(self.LIGHT_OUTLET, False)  # Turn off pump
 
     def __watering(self):
-        # ====turn on pump====
+        self.__relayControl.control(self.PUMP_OUTLET, True) # Turn on pump
         self.__waterTimes.append(time.time())
         time.sleep(self.PUMP_RUN_TIME)
-        # ====turn off pump====
+        self.__relayControl.control(self.PUMP_OUTLET, False) # Turn off pump
 
         self.__waterLeft -= self.PUMP_RUN_TIME * self.PUMP_GPS
         self.__plantJson["CurrWater"] = self.__waterLeft
@@ -147,10 +163,10 @@ class Sensors(threading.Thread):
         print("Sensors Being Measured")
 
         # ---- Temperature ----
-        self.__lastTempMeasure = 32  # ====temp====
+        self.__lastTempMeasure = self.__temp.read_temp()
 
         # ---- Moisture ----
-        self.__lastMoistureMeasure = 0.5  # ====moisture====
+        self.__lastMoistureMeasure = self.__moisture.get_moisture()
         if self.__lastMoistureMeasure <= self.SOIL_MOISTURE_LEVEL:
             if self.__firstMoistureFail:
                 self.__watering()
@@ -160,9 +176,10 @@ class Sensors(threading.Thread):
         else:
             self.__firstMoistureFail = False
 
-        # ---- Lighting ----
+        # ---- Lighting ---- FIXME
         currentDT = datetime.datetime.now()
-        self.__lastLightMeasure = 50 # ====light====
+        full, ir = self.__light.get_full_luminosity()
+        self.__lastLightMeasure = full # ====light====
         if currentDT.hour >= self.DAYLIGHT and currentDT.hour < self.LIGHTING_TIME:
             if not self.__nightLightOn: # check if light was still on
                 self.__nightLightOn = False
@@ -182,11 +199,9 @@ class Sensors(threading.Thread):
 
         # turn on and off light
         if self.__nightLightOn:
-            None
-            # turn on light
+            self.__relayControl.control(self.LIGHT_OUTLET, True)
         else:
-            None
-            # turn off light
+            self.__relayControl.control(self.LIGHT_OUTLET, False)
 
         self.__printSensorMeasures()
 

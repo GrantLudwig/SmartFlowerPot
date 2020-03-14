@@ -20,7 +20,7 @@ class CurrentTemp extends React.Component {
         return (
             <div className="App-temp">
                 <h3>Current Temperature:</h3>
-                <h4>{this.state.temp} degrees celsius</h4>
+                <h4>{this.state.temp} fahrenheit</h4>
             </div>
             
         );
