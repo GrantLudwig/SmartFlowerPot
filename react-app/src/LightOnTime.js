@@ -19,7 +19,7 @@ class LightOnTime extends React.Component {
     render() {
         return (
             <div className="App-light-on">
-                <h3>Yesterday light usage:</h3>
+                <h3>Yesterday's Light Usage:</h3>
                 <h4>{this.state.time} min</h4>
             </div>
             

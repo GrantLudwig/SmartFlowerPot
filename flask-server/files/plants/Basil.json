@@ -1,5 +1,5 @@
 {
-    "Moisture": 0.2,
-    "LightTime": 600,
-    "LightAmount": 60
+    "Moisture": 0.4,
+    "SpectrumAmount": 1000,
+    "IRAmount": 200
 }

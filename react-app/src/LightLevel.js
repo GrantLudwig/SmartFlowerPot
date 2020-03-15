@@ -19,8 +19,8 @@ class LightLevel extends React.Component {
     render() {
         return (
             <div className="App-Light-Level">
-                <h3>IR Level:</h3>
-                <h4>{this.state.light} Micrometers</h4>
+                <h3>Light Level:</h3>
+                <h4>{this.state.light} Lux</h4>
             </div>
             
         );

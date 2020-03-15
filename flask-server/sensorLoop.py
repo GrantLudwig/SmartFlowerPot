@@ -14,24 +14,28 @@ class Sensors(threading.Thread):
 
     SENSOR_MEASURE_INTERVAL = 600 # seconds, 10 min
 
-    PUMP_RUN_TIME = 2  # seconds
-    PUMP_GPM = 0.5  # GPM
-    PUMP_GPS = PUMP_GPM / 60.0  # Gallons per second
-    FULL_WATER_BIN = 1 # 1 gallon
+    PUMP_RUN_TIME = 10  # seconds
+    PUMP_GPS = 0.0125 # Gallons per second
+    FULL_WATER_BIN = 1.5 # 1 gallon
 
-    LIGHTING_TIME = 18  # in hours
-    DAYLIGHT = 7  # hours
+    LIGHTING_TIME = 19  # in hours
+    DAYLIGHT = 1  # hours
+    HOURS_OF_LIGHT_ON = (24 - LIGHTING_TIME) + DAYLIGHT
 
     def __init__(self):
         threading.Thread.__init__(self)
         self.__firstMoistureFail = False
+        self.__wateredLastRound = False
         self.__lastMoistureMeasure = 0.0
         self.__waterTimes = []
         self.__waterLeft = None
 
         self.__nightLightOn = False
-        self.__lastLightMeasure = 0
-        self.__aggregateLightTime = 0
+        self.__lastSpectrumMeasure = 0
+        self.__lastIrMeasure = 0
+        self.__aggregateSpectrum = 0
+        self.__aggregateIr = 0
+        self.__lightOnTime = 0
         self.__nightTime = 0
         self.__prevNightTime = 0
 
@@ -42,8 +46,8 @@ class Sensors(threading.Thread):
         self.__plantName = None
         self.__plantTime = None
         self.SOIL_MOISTURE_LEVEL = None
-        self.ENOUGH_LIGHT_TIME = None
-        self.ENOUGH_LIGHT = None
+        self.ENOUGH_SPECTRUM = None
+        self.ENOUGH_IR = None
 
         self.__readJson()
 
@@ -71,8 +75,8 @@ class Sensors(threading.Thread):
             self.__plantTypeJson = json.load(json_data)
 
         self.SOIL_MOISTURE_LEVEL = self.__plantTypeJson["Moisture"]
-        self.ENOUGH_LIGHT_TIME = self.__plantTypeJson["LightTime"]
-        self.ENOUGH_LIGHT = self.__plantTypeJson["LightAmount"]
+        self.ENOUGH_SPECTRUM = self.__plantTypeJson["SpectrumAmount"]
+        self.ENOUGH_IR = self.__plantTypeJson["IRAmount"]
 
     def __writeJson(self):
         with open("files/plantInfo.json", 'w') as outfile:
@@ -87,7 +91,7 @@ class Sensors(threading.Thread):
         return round(self.__lastMoistureMeasure * 100, 2)
 
     def getLight(self):
-        return self.__lastLightMeasure
+        return round(self.__light.calculate_lux(self.__lastSpectrumMeasure, self.__lastIrMeasure), 2)
 
     def getLengthLighting(self):
         if self.__nightLightOn:
@@ -154,7 +158,7 @@ class Sensors(threading.Thread):
 
     def __printSensorMeasures(self):
         print("Moisture:", self.getMoisture())
-        print("Light:", self.__lastLightMeasure)
+        print("Light:", self.getLight())
         print("Temp:", self.__lastTempMeasure)
         print("Water24:", self.getWaterLast24())
         print("Water Left:", self.getWaterLeft())
@@ -168,34 +172,46 @@ class Sensors(threading.Thread):
         # ---- Moisture ----
         self.__lastMoistureMeasure = self.__moisture.get_moisture()
         if self.__lastMoistureMeasure <= self.SOIL_MOISTURE_LEVEL:
-            if self.__firstMoistureFail:
+            if self.__firstMoistureFail and not self.__wateredLastRound:
                 self.__watering()
                 self.__firstMoistureFail = False
+                self.__wateredLastRound = True
             else:
                 self.__firstMoistureFail = True
+                self.__wateredLastRound = False
         else:
+            self.__wateredLastRound = False
             self.__firstMoistureFail = False
 
         # ---- Lighting ---- FIXME
+
         currentDT = datetime.datetime.now()
-        full, ir = self.__light.get_full_luminosity()
-        self.__lastLightMeasure = full # ====light====
+        self.__lastSpectrumMeasure, self.__lastIrMeasure = self.__light.get_full_luminosity()
         if currentDT.hour >= self.DAYLIGHT and currentDT.hour < self.LIGHTING_TIME:
             if not self.__nightLightOn: # check if light was still on
                 self.__nightLightOn = False
-                self.__aggregateLightTime = 0
-            if self.__lastLightMeasure > self.ENOUGH_LIGHT:
-                self.__aggregateLightTime += self.SENSOR_MEASURE_INTERVAL / 60 # to min
-        elif self.__aggregateLightTime < self.ENOUGH_LIGHT_TIME:
+                self.__aggregateSpectrum = 0
+                self.__aggregateIr = 0
+                self.__nightTime = self.HOURS_OF_LIGHT_ON * 60 # hours to min
+            self.__aggregateSpectrum += self.__lastSpectrumMeasure
+            self.__aggregateIr += self.__lastIrMeasure
+        elif self.__aggregateSpectrum < self.ENOUGH_SPECTRUM or self.__aggregateIr < self.ENOUGH_IR:
+            self.__aggregateSpectrum += self.__lastSpectrumMeasure
+            self.__aggregateIr += self.__lastIrMeasure
+
             if not self.__nightLightOn:
                 self.__nightLightOn = True
                 self.__prevNightTime = self.__nightTime
-                self.__nightTime = self.ENOUGH_LIGHT_TIME - self.__aggregateLightTime
-            else:
-                self.__aggregateLightTime += self.SENSOR_MEASURE_INTERVAL / 60  # to min
+                self.__lightOnTime = time.time()
+
+            if self.__aggregateSpectrum >= self.ENOUGH_SPECTRUM and self.__aggregateIr >= self.ENOUGH_IR:
+                self.__nightLightOn = False
+
         else:
             self.__nightLightOn = False
-            self.__aggregateLightTime = 0
+            self.__aggregateSpectrum = 0
+            self.__aggregateIr = 0
+            self.__nightTime = time.time() - self.__lightOnTime / 60  # seconds to min
 
         # turn on and off light
         if self.__nightLightOn:

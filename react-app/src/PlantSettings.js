@@ -32,9 +32,8 @@ class PlantSettings extends React.Component {
     render() {
         return (
             <div>
+                <br />
                 <WaterFilled />
-                <br />
-                <br />
                 <Popup name={this.state.name} type={this.state.type}/>
             </div> 
         );
@@ -53,7 +52,7 @@ function WaterFilled() {
                 delay={{ show: 250, hide: 400 }}
                 overlay={renderTooltip}
             >
-                <Button variant="primary" onClick={() => {handlePress(); refresh();}}>
+                <Button variant="primary" size="lg" onClick={() => {handlePress(); refresh();}} block>
                     Water Filled
                 </Button>
             </OverlayTrigger>
@@ -83,7 +82,7 @@ function Popup(props) {
 
     return (
         <>
-            <Button variant="success" onClick={handleShow}>
+            <Button variant="success" size="lg" onClick={handleShow} block>
                 Change Plant
             </Button>
 

@@ -11,7 +11,7 @@ lightNightOn = 0
 lightNightOff = 0
 lastLightTime = 0
 
-app = Flask("__main__")
+app = Flask("__main__", static_url_path='/static')
 CORS(app)
 
 # setup sensor measurements

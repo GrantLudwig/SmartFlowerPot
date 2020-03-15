@@ -33,7 +33,7 @@ class PlantTitle extends React.Component {
     render() {
         return (
             <div className="App-plant-name">
-                <h2>{this.state.name}'s Info</h2>
+                <u><h2>{this.state.name}'s Info</h2></u>
                 <h3>{this.state.name} was planted {this.state.time}</h3>
             </div>
             

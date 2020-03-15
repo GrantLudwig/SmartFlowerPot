@@ -14,16 +14,18 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 function App() {
     return (
         <div className="App">
+        <div className="App-header">
             <h1>Smart Flower Pot</h1>
             <PlantTitle />
             <MoistureLevel></MoistureLevel>
             <LightLevel></LightLevel>
             <br />
-            <h2>Flower Pot Info</h2>
+            <u><h2>Flower Pot Info</h2></u>
             <WaterLevel></WaterLevel>
             <CurrentTemp></CurrentTemp>
             <LightOnTime></LightOnTime>
             <PlantSettings></PlantSettings>
+        </div>
         </div>
     );
 }
