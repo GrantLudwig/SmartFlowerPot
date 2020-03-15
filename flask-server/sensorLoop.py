@@ -159,6 +159,8 @@ class Sensors(threading.Thread):
     def __printSensorMeasures(self):
         print("Moisture:", self.getMoisture())
         print("Light:", self.getLight())
+        print("Full Spectrum:", self.__lastSpectrumMeasure)
+        print("IR:", self.__lastIrMeasure)
         print("Temp:", self.__lastTempMeasure)
         print("Water24:", self.getWaterLast24())
         print("Water Left:", self.getWaterLeft())

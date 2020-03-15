@@ -3,6 +3,7 @@ from flask_cors import CORS
 import json
 import time
 from sensorLoop import Sensors
+import subprocess
 
 WATERING_DURATION = 10 # seconds
 PUMP_GPM = 1 # GPM
@@ -99,6 +100,25 @@ def plant_time():
 
     plantTime = sensors.getPlantTime()
     response = json.dumps({"time": plantTime})  # in gallons
+    return Response(response=response, status=200, mimetype="application/json")
+
+@app.route("/back/getNetwork", methods=['GET'])
+def get_network():
+    arg = 'iwgetid'  # Linux command to retrieve ip addresses.
+    # Runs 'arg' in a 'hidden terminal'.
+    p = subprocess.Popen(arg, shell=True, stdout=subprocess.PIPE)
+    returndata = p.communicate()  # Get data from 'p terminal'.
+    ssid_name = str(returndata[0])
+    ssid_name = ssid_name[19:-4]
+
+    arg='hostname -I' # Linux command to retrieve ip addresses.
+    # Runs 'arg' in a 'hidden terminal'.
+    p=subprocess.Popen(arg,shell=True,stdout=subprocess.PIPE)
+    returndata = p.communicate() # Get data from 'p terminal'.
+    ip_address = str(returndata[0])
+    ip_address = ip_address[2:-4]
+
+    response = json.dumps({"ssid": ssid_name, "ip": ip_address})  # in gallons
     return Response(response=response, status=200, mimetype="application/json")
 
 @app.route("/back/newPlant", methods=['POST'])
